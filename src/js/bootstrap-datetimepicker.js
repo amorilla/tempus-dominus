@@ -1,5 +1,5 @@
 /*!
-  * Bootstrap Datetime Picker v4.17.49
+  * Bootstrap Datetime Picker v4.17.50
   * Copyright 2015-2020 Jonathan Peterson
   * Licensed under MIT (https://github.com/Eonasdan/bootstrap-datetimepicker/blob/master/LICENSE)
   */
@@ -650,7 +650,7 @@
                     endDecadeYear = startDecade.year() + 12;
                     minDateDecade = options.minDate && options.minDate.isAfter(startDecade, 'y') && options.minDate.year() <= endDecadeYear;
                     maxDateDecade = options.maxDate && options.maxDate.isAfter(startDecade, 'y') && options.maxDate.year() <= endDecadeYear;
-                    html += '<span data-action="selectDecade" class="decade' + (date.isAfter(startDecade) && date.year() <= endDecadeYear ? ' active' : '') +
+                    html += '<span data-action="selectDecade" class="decade' + (date.isAfter(startDecade, 'y') && date.year() <= endDecadeYear ? ' active' : '') +
                         (!isValid(startDecade, 'y') && !minDateDecade && !maxDateDecade ? ' disabled' : '') + '" data-selection="' + (startDecade.year() + 6) + '">' + (startDecade.year() + 1) + ' - ' + (startDecade.year() + 12) + '</span>';
                     startDecade.add(12, 'y');
                 }
@@ -845,17 +845,16 @@
                     targetMoment.tz(options.timeZone);
                 }
 
-                if (options.stepping !== 1) {
-                    targetMoment.minutes((Math.round(targetMoment.minutes() / options.stepping) * options.stepping)).seconds(0);
+		if (!unset && options.minDate && !options.keepInvalid && targetMoment.isBefore(options.minDate, 'd')) {
+		targetMoment = options.minDate;
+		}
+		if (!unset && options.maxDate && !options.keepInvalid && targetMoment.isAfter(options.maxDate, 'd')) {
+		targetMoment = options.maxDate;
+		}
 
-                    while (options.minDate && targetMoment.isBefore(options.minDate)) {
-                        targetMoment.add(options.stepping, 'minutes');
-                    }
-                }
-
-                if (isValid(targetMoment)) {
-                    date = targetMoment;
-                    viewDate = date.clone();
+                if (isValid(targetMoment, 'd')) {
+                    date = targetMoment.locale(options.locale);;
+                    viewDate = date.clone().locale(options.locale);
                     input.val(date.format(actualFormat));
                     element.data('date', date.format(actualFormat));
                     unset = false;
@@ -882,7 +881,6 @@
                     });
                 }
             },
-
             /**
              * Hides the widget. Possibly will emit dp.hide
              */
@@ -1681,18 +1679,16 @@
             if (!parsedDate.isValid()) {
                 throw new TypeError('maxDate() Could not parse date parameter: ' + maxDate);
             }
-            if (options.minDate && parsedDate.isBefore(options.minDate)) {
+            if (options.minDate && parsedDate.isBefore(options.minDate, 'd')) {
                 throw new TypeError('maxDate() date parameter is before options.minDate: ' + parsedDate.format(actualFormat));
             }
             options.maxDate = parsedDate;
-            if (options.useCurrent && !options.keepInvalid && date.isAfter(maxDate)) {
-                setValue(options.maxDate);
-            }
-            if (viewDate.isAfter(parsedDate)) {
-                viewDate = parsedDate.clone().subtract(options.stepping, 'm');
+            if (!unset && date && !options.keepInvalid && date.isAfter(options.maxDate, 'd')) {
+		setValue(options.maxDate);
+		viewDate = parsedDate.clone().locale(options.locale);
             }
             update();
-            return picker;
+			return picker;
         };
 
         picker.minDate = function (minDate) {
@@ -1717,20 +1713,18 @@
             if (!parsedDate.isValid()) {
                 throw new TypeError('minDate() Could not parse date parameter: ' + minDate);
             }
-            if (options.maxDate && parsedDate.isAfter(options.maxDate)) {
+            if (options.maxDate && parsedDate.isAfter(options.maxDate, 'd')) {
                 throw new TypeError('minDate() date parameter is after options.maxDate: ' + parsedDate.format(actualFormat));
             }
             options.minDate = parsedDate;
-            if (options.useCurrent && !options.keepInvalid && date.isBefore(minDate)) {
-                setValue(options.minDate);
-            }
-            if (viewDate.isBefore(parsedDate)) {
-                viewDate = parsedDate.clone().add(options.stepping, 'm');
+            if (!unset && date && !options.keepInvalid && date.isBefore(options.minDate, 'd')) {
+		setValue(options.minDate);
+		viewDate = parsedDate.clone().locale(options.locale);
             }
             update();
             return picker;
         };
-
+        
         picker.defaultDate = function (defaultDate) {
             ///<signature helpKeyword="$.fn.datetimepicker.defaultDate">
             ///<summary>Returns a moment with the options.defaultDate option configuration or false if not set</summary>
@@ -1760,7 +1754,7 @@
             if (!parsedDate.isValid()) {
                 throw new TypeError('defaultDate() Could not parse date parameter: ' + defaultDate);
             }
-            if (!isValid(parsedDate)) {
+            if (!isValid(parsedDate, 'd')) {
                 throw new TypeError('defaultDate() date passed is invalid according to component setup validations');
             }
 
@@ -2609,3 +2603,4 @@
 
     return $.fn.datetimepicker;
 }));
+
